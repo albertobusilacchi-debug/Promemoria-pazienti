@@ -550,7 +550,11 @@ function componi(modello, valori) {
   let testo = String(modello).replace(/\{(\w+)\}/g, (intero, chiave) =>
     Object.prototype.hasOwnProperty.call(valori, chiave) ? valori[chiave] : intero
   );
-  testo = testo.replace(/\(\s*\)/g, "").replace(/[ \t]{2,}/g, " ").replace(/\s+([.,;:!?])/g, "$1");
+  testo = testo.replace(/\(\s*\)/g, "");
+  /* Se un segnaposto resta vuoto, la preposizione che lo introduceva rimane
+     appesa: "alle ore 10:00 presso. Per disdette...". Qui la si toglie. */
+  testo = testo.replace(/\s*\b(presso|alle ore|alle|il giorno|del|dalle)\s*(?=[.,;:!?]|$)/gi, "");
+  testo = testo.replace(/[ \t]{2,}/g, " ").replace(/\s+([.,;:!?])/g, "$1");
   return testo.trim();
 }
 
@@ -589,6 +593,37 @@ function indicePerNome() {
     (indice[k] = indice[k] || []).push(c);
   });
   return indice;
+}
+
+/* Nomi di battesimo: servono a capire se la riga e' "Cognome Nome" o "Nome
+   Cognome", perche' nel calendario l'ordine cambia da una riga all'altra e il
+   messaggio saluta col nome. Non e' un elenco completo - non serve: decide solo
+   quando UNA delle due parole e' un nome e l'altra no. */
+const NOMI = new Set(("alberto alessandra alessandro alessio alfredo alice amedeo andrea angela angelo anna "
++ "annamaria antonella antonietta antonio arianna armando arturo attilio aurora barbara beatrice benedetta "
++ "bruno camilla carla carlo carmela carmine caterina cecilia chiara christian christine cinzia claudia "
++ "claudio corinna cristian cristina cristiano daniela daniele dario davide delia diego domenico donatella "
++ "edoardo elena eleonora elisa elisabetta emanuela emanuele emilia enrica enrico enzo eugenio fabio fabrizio "
++ "federica federico filippo fiorella flavia francesca francesco franco gabriele gabriella gaia gaetano "
++ "genoveffa giacomo giada giampiero giancarlo gianluca gianmarco gianni gianpaolo gina gino giorgia giorgio "
++ "giovanna giovanni giulia giuliana giuliano giulio giuseppa giuseppe grazia graziella gregorio guido "
++ "ida ilaria ilario ines ira irene isabella ivan ivano jacopo joyce katia laura lara leonardo lidia lina "
++ "linda lisa livia lorena lorenzo loredana loretta luca lucia luciana luciano lucio ludovica luigi luigia "
++ "manuel manuela marco margherita maria mariangela marina mario marta martina massimiliano massimo matteo "
++ "maurizio mauro michela michele milena mirco mirella monica nadia natalia nicola nicole nicolo noemi "
++ "olga oriana oscar paola paolo patrizia patrizio pierluigi piero pietro raffaele raffaella raoul renata "
++ "renato riccardo rita roberta roberto romina rosa rosanna rosaria rossana rossella ruggero sabina sabrina "
++ "samuele sandra sandro sante sara saura sergio silvana silvia simona simone sofia sonia stefania stefano "
++ "susanna teresa thiago tiziana tommaso tonino ubaldo umberto valentina valeria valerio vanessa vera "
++ "veronica vincenzo viola virginia vittoria vittorio walter"
+).split(" "));
+function eNome(parola) { return NOMI.has(senzaAccenti(parola)); }
+
+/* Nel calendario i nomi sono scritti come capita: "CICCARELLI RENATA", "saura".
+   Nel messaggio al paziente vanno con l'iniziale maiuscola. */
+function conMaiuscole(testo) {
+  return String(testo || "").toLowerCase().replace(/(^|[\s'’-])([a-zà-ÿ])/g,
+    (tutto, prima, lettera) => prima + lettera.toUpperCase());
 }
 
 /* Parole che nei titoli del calendario aprono la nota clinica: il nome del
@@ -664,9 +699,17 @@ function analizza(testo, cognomePrima) {
     let cognome = "", nome = "";
     if (parole.length === 1) { cognome = parole[0]; }
     else if (parole.length > 1) {
-      if (cognomePrima) { nome = parole[parole.length - 1]; cognome = parole.slice(0, -1).join(" "); }
-      else { nome = parole[0]; cognome = parole.slice(1).join(" "); }
+      const primo = parole[0], ultimo = parole[parole.length - 1];
+      // se una sola delle due estremita' e' un nome di battesimo, l'ordine e' deciso:
+      // vale piu' del pulsante, perche' nel calendario cambia riga per riga
+      let primaIlCognome = cognomePrima;
+      if (eNome(primo) && !eNome(ultimo)) primaIlCognome = false;
+      else if (eNome(ultimo) && !eNome(primo)) primaIlCognome = true;
+      if (primaIlCognome) { nome = ultimo; cognome = parole.slice(0, -1).join(" "); }
+      else { nome = primo; cognome = parole.slice(1).join(" "); }
     }
+    cognome = conMaiuscole(cognome);
+    nome = conMaiuscole(nome);
     /* Numero assente nel calendario: lo cerco in rubrica per cognome+nome.
        Se piu' contatti hanno lo stesso nome NON scelgo io: sarebbe il modo
        piu' facile per mandare il messaggio alla persona sbagliata. */
