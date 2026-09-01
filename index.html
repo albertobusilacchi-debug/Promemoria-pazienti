@@ -750,6 +750,48 @@ function analizza(testo, cognomePrima) {
   });
 }
 
+/* ------------------------------------- giornata ricevuta da un link */
+/* I dati viaggiano dopo il "#" dell'indirizzo: quella parte NON viene mandata
+   al sito, resta nel telefono. Cosi' l'elenco dei pazienti passa dal messaggio
+   all'app senza toccare nessun server. */
+function daBase64(testo) {
+  const b64 = testo.replace(/-/g, "+").replace(/_/g, "/");
+  const binario = atob(b64 + "=".repeat((4 - (b64.length % 4)) % 4));
+  const byte = Uint8Array.from(binario, (c) => c.charCodeAt(0));
+  return JSON.parse(new TextDecoder().decode(byte));
+}
+
+function giornataDalLink() {
+  const pezzo = (location.hash || "").match(/[#&]g=([A-Za-z0-9\-_]+)/);
+  if (!pezzo) return;
+  let dati;
+  try { dati = daBase64(pezzo[1]); } catch (e) { return; }
+  if (!dati || !Array.isArray(dati.r) || !dati.d) return;
+  // l'indirizzo si ripulisce subito: ricaricando non si importa due volte
+  history.replaceState(null, "", location.pathname + location.search);
+
+  const righe = dati.r.map(([ora, cognome, nome, telefono, sede]) => ({
+    ora: ora || "", cognome: cognome || "", nome: nome || "",
+    telefono: telefono || "", sede: sede || "", valido: numeroValido(telefono || ""),
+  }));
+  const pronti = righe.filter((r) => r.valido);
+  const daFare = righe.filter((r) => !r.valido);
+  const quando = dataEstesa(dati.d);
+
+  apriFoglio("Giornata ricevuta", `
+    <p class="nota">È arrivata la giornata di <b>${esc(quando)}</b>.</p>
+    <div class="sommario"><div class="cifre">
+      <div class="voce"><span class="n">${righe.length}</span><span class="che">pazienti</span></div>
+      <div class="voce"><span class="n">${pronti.length}</span><span class="che">con il numero</span></div>
+      <div class="voce"><span class="n">${daFare.length}</span><span class="che">da completare</span></div>
+    </div></div>
+    <button class="bottone primario" type="button" id="l-carica">Carica nella giornata</button>
+    <button class="bottone" type="button" id="l-annulla">Non adesso</button>`, (foglio) => {
+    foglio.querySelector("#l-carica").onclick = () => aggiungi(pronti, dati.d, daFare);
+    foglio.querySelector("#l-annulla").onclick = chiudiFoglio;
+  });
+}
+
 /* ------------------------------------------------------- come si invia */
 /* Su iPhone nessun indirizzo puo' scegliere fra WhatsApp e WhatsApp Business:
    decide iOS in base a quale delle due app e' installata. Qui si sceglie solo
@@ -1388,6 +1430,7 @@ if ("serviceWorker" in navigator) {
   });
 }
 disegnaOggi();
+giornataDalLink();
 </script>
 
 </body>
