@@ -329,6 +329,24 @@ input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-
         <div class="anteprima" id="anteprima-modello"></div>
       </div>
       <div class="scheda">
+        <h2>Come si invia</h2>
+        <p class="nota">Dal telefono si apre l'app WhatsApp installata; dal computer si apre
+          WhatsApp Web. In automatico l'app se ne accorge da sola.</p>
+        <label class="campo"><span>Apri i messaggi con</span>
+          <select id="canale-invio">
+            <option value="auto">Automatico — telefono o computer</option>
+            <option value="telefono">L'app WhatsApp del telefono</option>
+            <option value="web">WhatsApp Web (computer)</option>
+          </select></label>
+        <label class="campo"><span>Numero su cui fare la prova</span>
+          <input type="tel" id="numero-prova" placeholder="es. il tuo numero"></label>
+        <a class="bottone" id="prova-invio" target="_blank" rel="noopener">Prova: apri un messaggio</a>
+        <p class="nota"><b>Se lo studio usa WhatsApp Business</b>, fai questa prova sul telefono
+          di chi invia e guarda quale app si apre. iOS sceglie da solo fra WhatsApp e WhatsApp
+          Business: nessun collegamento può imporglielo. Se si apre quella sbagliata, la soluzione
+          è tenere solo WhatsApp Business su quel telefono, oppure inviare da WhatsApp Web.</p>
+      </div>
+      <div class="scheda">
         <h2>Firma</h2>
         <label class="campo"><span>Chi firma — <code>{medico}</code></span>
           <input type="text" id="firma-medico"></label>
@@ -574,6 +592,25 @@ function analizza(testo, cognomePrima) {
   });
 }
 
+/* ------------------------------------------------------- come si invia */
+/* Su iPhone nessun indirizzo puo' scegliere fra WhatsApp e WhatsApp Business:
+   decide iOS in base a quale delle due app e' installata. Qui si sceglie solo
+   FRA TELEFONO E COMPUTER, che invece cambia davvero il tipo di collegamento. */
+function suTelefono() {
+  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || "");
+}
+function canaleInvio() {
+  const scelta = stato.invio || "auto";
+  if (scelta !== "auto") return scelta;
+  return suTelefono() ? "telefono" : "web";
+}
+function linkWhatsApp(numero, testo) {
+  const t = encodeURIComponent(testo);
+  return canaleInvio() === "web"
+    ? `https://web.whatsapp.com/send?phone=${numero}&text=${t}`
+    : `https://wa.me/${numero}?text=${t}`;
+}
+
 /* ------------------------------------------------------------ interfaccia */
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -680,7 +717,7 @@ function rigaHtml(app) {
   const pezzi = [app.sede, numeroLeggibile(c.telefono)].filter(Boolean);
   let azione;
   if (eff === "in_coda") {
-    const link = `https://wa.me/${e164(c.telefono)}?text=${encodeURIComponent(messaggioPer(app, giornoScelto))}`;
+    const link = linkWhatsApp(e164(c.telefono), messaggioPer(app, giornoScelto));
     azione = `<a class="invia" href="${esc(link)}" target="_blank" rel="noopener"
                  data-invia="${esc(app.id)}">Invia</a>`;
   } else if (eff === "inviato") {
@@ -919,6 +956,9 @@ function menuContatto(chiave) {
 /* ----------------------------------------------------------------- TESTO */
 function disegnaTesto() {
   $("#modello").value = stato.modello;
+  $("#canale-invio").value = stato.invio || "auto";
+  $("#numero-prova").value = stato.numeroProva || "";
+  aggiornaProva();
   $("#firma-medico").value = stato.medico;
   $("#firma-segreteria").value = stato.segreteria;
   $("#segnaposti").innerHTML = SEGNAPOSTI
@@ -932,6 +972,15 @@ function disegnaTesto() {
             <div class="dettaglio">${esc(s.indirizzo || "senza indirizzo")}</div></div>
           <div class="azione"><button class="piu" type="button" data-sede="${i}" aria-label="Elimina">✕</button></div>
         </div>`).join("")}</div>`;
+}
+
+function aggiornaProva() {
+  const numero = e164($("#numero-prova").value || "");
+  const bottone = $("#prova-invio");
+  const valido = numeroValido($("#numero-prova").value || "");
+  bottone.href = valido ? linkWhatsApp(numero, "Prova di collegamento — questo messaggio non è per un paziente.") : "#";
+  bottone.style.opacity = valido ? "1" : ".45";
+  bottone.style.pointerEvents = valido ? "auto" : "none";
 }
 
 function aggiornaAnteprima() {
@@ -1042,6 +1091,12 @@ function collega() {
   $("#modello").addEventListener("input", (e) => { stato.modello = e.target.value; salva(); aggiornaAnteprima(); });
   $("#firma-medico").addEventListener("input", (e) => { stato.medico = e.target.value; salva(); aggiornaAnteprima(); });
   $("#firma-segreteria").addEventListener("input", (e) => { stato.segreteria = e.target.value; salva(); aggiornaAnteprima(); });
+  $("#canale-invio").addEventListener("change", (e) => {
+    stato.invio = e.target.value; salva(); aggiornaProva(); disegnaOggi();
+  });
+  $("#numero-prova").addEventListener("input", (e) => {
+    stato.numeroProva = e.target.value; salva(); aggiornaProva();
+  });
   $("#aggiungi-sede").onclick = () => {
     const nome = $("#sede-nome").value.trim();
     if (!nome) return;

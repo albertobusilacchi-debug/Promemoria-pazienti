@@ -33,6 +33,18 @@ relativi indirizzi. In **Rubrica** si correggono i nominativi e si segna chi non
 essere contattato. In **Dati** si fa il backup: conviene farlo ogni tanto, perché svuotare
 i dati di Safari o cambiare telefono cancella tutto.
 
+## Come si invia (telefono o WhatsApp Web)
+
+In **Testo → Come si invia** si sceglie con cosa aprire i messaggi. In automatico l'app se ne
+accorge da sola: dal telefono apre l'app WhatsApp installata, dal computer apre WhatsApp Web.
+La stessa scelta si può forzare a mano, per esempio per usare sempre WhatsApp Web.
+
+**Se lo studio usa WhatsApp Business**: su iPhone nessun collegamento può decidere fra WhatsApp
+e WhatsApp Business — sceglie iOS in base a quale delle due è installata. Per questo c'è il
+pulsante **Prova: apri un messaggio**: si fa la prova sul telefono di chi invia e si guarda
+quale app si apre. Se si apre quella sbagliata, le strade sono due: tenere solo WhatsApp
+Business su quel telefono, oppure inviare da WhatsApp Web sul computer.
+
 ## Nota sull'invio
 
 Su iPhone nessuna applicazione può inviare messaggi WhatsApp da sola: ogni promemoria
