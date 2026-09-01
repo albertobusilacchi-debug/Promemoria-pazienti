@@ -183,6 +183,8 @@ nav.schede button[aria-selected="true"] { color: var(--verde); }
   width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--riga);
   background: transparent; color: var(--ardesia); cursor: pointer; font-size: 17px; line-height: 1;
 }
+.invia.manca { background: transparent; color: var(--ardesia); border: 1px dashed var(--riga); }
+.riga.da_recuperare .stato-striscia { background: var(--ardesia-tenue); }
 .pillola {
   font-family: var(--display); font-size: 11px; font-weight: 700; letter-spacing: .05em;
   text-transform: uppercase; padding: 3px 8px; border-radius: 99px; white-space: nowrap;
@@ -558,8 +560,14 @@ function componi(modello, valori) {
   return testo.trim();
 }
 
+/* Un appuntamento senza numero non ha un contatto in rubrica (la rubrica e'
+   indicizzata sul numero): in quel caso cognome e nome stanno sull'appuntamento. */
+function datiPaziente(app) {
+  return stato.contatti[app.chiave] || { cognome: app.cognome || "", nome: app.nome || "", telefono: "" };
+}
+
 function messaggioPer(app, iso) {
-  const c = stato.contatti[app.chiave] || {};
+  const c = datiPaziente(app);
   return componi(stato.modello, {
     nome: c.nome || c.cognome || "",
     cognome: c.cognome || "",
@@ -804,6 +812,7 @@ function chiudiFoglio() {
 
 /* ------------------------------------------------------------------ OGGI */
 function statoEffettivo(app) {
+  if (!app.chiave) return "da_recuperare";
   const c = stato.contatti[app.chiave] || {};
   if (app.stato === "inviato") return "inviato";
   if (c.optout) return "escluso";
@@ -819,7 +828,7 @@ function disegnaOggi() {
   $("#sotto-oggi").textContent = giornoScelto === isoOggi()
     ? "La giornata di oggi" : "Giornata del " + dataBreve(giornoScelto);
 
-  const gruppi = { in_coda: [], voce: [], inviato: [], escluso: [] };
+  const gruppi = { in_coda: [], da_recuperare: [], voce: [], inviato: [], escluso: [] };
   lista.forEach((a) => gruppi[statoEffettivo(a)].push(a));
 
   const totale = lista.length;
@@ -832,6 +841,7 @@ function disegnaOggi() {
          <div class="voce"><span class="n">${gruppi.in_coda.length}</span><span class="che">da inviare</span></div>
          <div class="voce"><span class="n">${fatti}</span><span class="che">inviati</span></div>
          <div class="voce"><span class="n">${gruppi.voce.length}</span><span class="che">da chiamare</span></div>
+         ${gruppi.da_recuperare.length ? `<div class="voce"><span class="n">${gruppi.da_recuperare.length}</span><span class="che">senza numero</span></div>` : ""}
        </div>
        <div class="avanzamento">
          <i class="fatto" style="width:${perc}%"></i><i class="voce-ambra" style="width:${percVoce}%"></i>
@@ -839,6 +849,7 @@ function disegnaOggi() {
 
   const sezioni = [
     ["Da inviare", gruppi.in_coda],
+    ["Numero da recuperare", gruppi.da_recuperare],
     ["Da chiamare a voce", gruppi.voce],
     ["Già inviati", gruppi.inviato],
     ["Non contattare", gruppi.escluso],
@@ -861,7 +872,7 @@ function disegnaOggi() {
 }
 
 function rigaHtml(app) {
-  const c = stato.contatti[app.chiave] || {};
+  const c = datiPaziente(app);
   const eff = statoEffettivo(app);
   const nome = `${c.cognome || ""} ${c.nome || ""}`.trim() || numeroLeggibile(c.telefono);
   const pezzi = [app.sede, numeroLeggibile(c.telefono)].filter(Boolean);
@@ -872,6 +883,8 @@ function rigaHtml(app) {
                  data-invia="${esc(app.id)}">Invia</a>`;
   } else if (eff === "inviato") {
     azione = `<span class="pillola fatto">inviato</span>`;
+  } else if (eff === "da_recuperare") {
+    azione = `<button class="invia manca" type="button" data-numero="${esc(app.id)}">＋ numero</button>`;
   } else if (eff === "voce") {
     azione = `<a class="pillola voce" href="tel:${esc(e164(c.telefono))}">chiama</a>`;
   } else {
@@ -960,6 +973,34 @@ function modificaApp(id) {
   });
 }
 
+function aggiungiNumero(id) {
+  const app = trovaApp(id);
+  if (!app) return;
+  const nome = `${app.cognome || ""} ${app.nome || ""}`.trim();
+  apriFoglio(nome || "Paziente", `
+    <p class="nota">Il numero non c'era nel calendario né in rubrica. Scrivilo qui: il paziente
+      passa fra quelli da inviare e resta in rubrica per le prossime volte.</p>
+    <label class="campo"><span>Numero di cellulare</span>
+      <input type="tel" id="n-tel" inputmode="tel" placeholder="333 123 4567" autofocus></label>
+    <button class="bottone primario" type="button" id="n-salva">Salva e metti in coda</button>`,
+    (foglio) => {
+      foglio.querySelector("#n-salva").onclick = () => {
+        const grezzo = foglio.querySelector("#n-tel").value.trim();
+        if (!numeroValido(grezzo)) { alert("Quel numero non sembra un cellulare valido."); return; }
+        const chiave = chiaveTel(grezzo);
+        const esistente = stato.contatti[chiave];
+        stato.contatti[chiave] = esistente || {
+          chiave, cognome: app.cognome || "", nome: app.nome || "", telefono: grezzo,
+        };
+        app.chiave = chiave;
+        delete app.cognome; delete app.nome;
+        app.stato = "in_coda";
+        salva(); chiudiFoglio(); disegnaOggi();
+        avvisa(`${nome}: numero salvato, ora è fra quelli da inviare.`);
+      };
+    });
+}
+
 /* ------------------------------------------------------- incolla giornata */
 function apriIncolla() {
   apriFoglio("Aggiungi la giornata", `
@@ -979,6 +1020,7 @@ function apriIncolla() {
       const righe = analizza(foglio.querySelector("#i-testo").value,
                              foglio.querySelector("#i-ordine").value === "cognome");
       const buone = righe.filter((r) => r.valido);
+      const mancanti = righe.filter((r) => !r.valido && (r.cognome || r.nome));
       foglio.querySelector("#i-esito").innerHTML = righe.length === 0
         ? `<p class="nota">Non ho letto nessuna riga.</p>`
         : `<div class="titolo-gruppo">Ho letto ${righe.length} righe</div>
@@ -998,9 +1040,11 @@ function apriIncolla() {
                </div><div class="azione"></div>
              </div>`).join("")}</div>
            <button class="bottone primario" type="button" id="i-conferma" style="margin-top:12px">
-             Aggiungi ${buone.length} appuntament${buone.length === 1 ? "o" : "i"}</button>`;
+             Aggiungi ${buone.length + mancanti.length} appuntamenti${
+               mancanti.length ? ` — ${buone.length} pronti, ${mancanti.length} da completare` : ""}</button>`;
       const conferma = foglio.querySelector("#i-conferma");
-      if (conferma) conferma.onclick = () => aggiungi(buone, foglio.querySelector("#i-data").value);
+      if (conferma) conferma.onclick = () =>
+        aggiungi(buone, foglio.querySelector("#i-data").value, mancanti);
     };
     foglio.querySelector("#i-leggi").onclick = leggi;
     foglio.querySelector("#i-testo").addEventListener("input", () => {
@@ -1009,7 +1053,7 @@ function apriIncolla() {
   });
 }
 
-function aggiungi(righe, iso) {
+function aggiungi(righe, iso, senzaNumero) {
   if (!iso) iso = giornoScelto;
   if (stato.esempi) { stato.giornate = {}; stato.contatti = {}; stato.esempi = false; }
   if (!stato.giornate[iso]) stato.giornate[iso] = [];
@@ -1028,9 +1072,19 @@ function aggiungi(righe, iso) {
       chiave, ora: r.ora, sede: r.sede, note: r.note || "", stato: "in_coda",
     });
   });
+  // chi non ha il numero resta nella giornata, in attesa di essere completato:
+  // sparire dall'elenco significherebbe che qualcuno se lo dimentica
+  (senzaNumero || []).forEach((r) => {
+    stato.giornate[iso].push({
+      id: "x-" + Date.now() + "-" + Math.random().toString(36).slice(2, 6),
+      chiave: "", cognome: r.cognome, nome: r.nome,
+      ora: r.ora, sede: r.sede, note: r.note || "", stato: "da_recuperare",
+    });
+  });
   giornoScelto = iso;
   salva(); chiudiFoglio(); disegnaOggi();
-  avvisa(`Aggiunti ${righe.length} appuntamenti · ${nuovi} pazienti nuovi in rubrica.`);
+  const quanti = righe.length + (senzaNumero || []).length;
+  avvisa(`Aggiunti ${quanti} appuntamenti · ${nuovi} pazienti nuovi in rubrica.`);
 }
 
 /* --------------------------------------------------------------- RUBRICA */
@@ -1216,6 +1270,8 @@ function collega() {
   document.addEventListener("click", (ev) => {
     const invia = ev.target.closest("[data-invia]");
     if (invia) { segnaInviato(invia.dataset.invia); return; }   // segna prima di uscire da Safari
+    const manca = ev.target.closest("[data-numero]");
+    if (manca) { aggiungiNumero(manca.dataset.numero); return; }
     const menu = ev.target.closest("[data-menu]");
     if (menu) { menuRiga(menu.dataset.menu); return; }
     const contatto = ev.target.closest("[data-contatto]");
