@@ -1,0 +1,1092 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Promemoria pazienti</title>
+<meta name="description" content="Promemoria WhatsApp per i pazienti dell'ambulatorio. I dati restano in questo telefono.">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#075E54">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Promemoria">
+<link rel="apple-touch-icon" href="icone/icona-180.png">
+<link rel="icon" href="icone/icona-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root {
+  --carta:        #F7F8F7;
+  --carta-alta:   #FFFFFF;
+  --riga:         #E2E6E4;
+  --inchiostro:   #14202B;
+  --ardesia:      #5A6B78;
+  --ardesia-tenue:#8B99A3;
+  --verde:        #0F8A5F;
+  --verde-tenue:  #E4F2EB;
+  --su-verde:     #FFFFFF;
+  --ambra:        #B26A00;
+  --ambra-tenue:  #FBEEDA;
+  --ruggine:      #9C3B2E;
+  --ruggine-tenue:#F7E6E3;
+  --ombra:        0 1px 2px rgba(20, 32, 43, .06), 0 8px 24px -16px rgba(20, 32, 43, .3);
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --testo:   "Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --carta:        #101A22;
+    --carta-alta:   #18242E;
+    --riga:         #27353F;
+    --inchiostro:   #E8EDEC;
+    --ardesia:      #9AAAB4;
+    --ardesia-tenue:#6C7C87;
+    --verde:        #3FBE8B;
+    --verde-tenue:  #14312A;
+    --su-verde:     #06251A;
+    --ambra:        #E0A44A;
+    --ambra-tenue:  #332713;
+    --ruggine:      #E08A7C;
+    --ruggine-tenue:#3A211D;
+    --ombra:        0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"] {
+  --carta:        #101A22;
+  --carta-alta:   #18242E;
+  --riga:         #27353F;
+  --inchiostro:   #E8EDEC;
+  --ardesia:      #9AAAB4;
+  --ardesia-tenue:#6C7C87;
+  --verde:        #3FBE8B;
+  --verde-tenue:  #14312A;
+  --su-verde:     #06251A;
+  --ambra:        #E0A44A;
+  --ambra-tenue:  #332713;
+  --ruggine:      #E08A7C;
+  --ruggine-tenue:#3A211D;
+  --ombra:        0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body {
+  margin: 0; background: var(--carta); color: var(--inchiostro);
+  font-family: var(--testo); font-size: 16px; line-height: 1.45;
+  -webkit-text-size-adjust: 100%;
+}
+button, input, textarea, select { font: inherit; color: inherit; }
+
+/* ---------------------------------------------------------------- impianto */
+#app { max-width: 520px; margin: 0 auto; padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+.schermo { display: none; }
+.schermo.attivo { display: block; }
+
+header.testata {
+  position: sticky; top: 0; z-index: 20;
+  background: color-mix(in srgb, var(--carta) 88%, transparent);
+  backdrop-filter: saturate(180%) blur(14px);
+  border-bottom: 1px solid var(--riga);
+  padding: max(10px, env(safe-area-inset-top)) 16px 10px;
+}
+.testata h1 {
+  font-family: var(--display); font-weight: 700; font-size: 22px;
+  margin: 0; letter-spacing: -.015em; text-wrap: balance;
+}
+.testata .sotto { color: var(--ardesia); font-size: 13.5px; margin-top: 1px; }
+
+.contenuto { padding: 14px 16px 24px; display: flex; flex-direction: column; gap: 18px; }
+
+/* ------------------------------------------------------------- navigazione */
+nav.schede {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  background: color-mix(in srgb, var(--carta-alta) 92%, transparent);
+  backdrop-filter: saturate(180%) blur(14px);
+  border-top: 1px solid var(--riga);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+nav.schede button {
+  background: none; border: 0; padding: 9px 4px 10px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  color: var(--ardesia-tenue); font-family: var(--display); font-weight: 600;
+  font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase;
+}
+nav.schede button svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.7; }
+nav.schede button[aria-selected="true"] { color: var(--verde); }
+
+/* -------------------------------------------------------------- giornata */
+.giorno {
+  display: flex; align-items: center; gap: 6px; justify-content: space-between;
+}
+.giorno .frecce { display: flex; gap: 4px; }
+.frecce button {
+  width: 34px; height: 34px; border-radius: 9px; border: 1px solid var(--riga);
+  background: var(--carta-alta); color: var(--ardesia); cursor: pointer; font-size: 15px;
+}
+.giorno .etichetta { font-family: var(--display); font-weight: 600; font-size: 15px; }
+
+.sommario {
+  background: var(--carta-alta); border: 1px solid var(--riga);
+  border-radius: 14px; padding: 13px 15px 15px; box-shadow: var(--ombra);
+}
+.sommario .cifre { display: flex; gap: 18px; align-items: baseline; flex-wrap: wrap; }
+.sommario .voce { display: flex; align-items: baseline; gap: 6px; }
+.sommario .n {
+  font-family: var(--display); font-weight: 700; font-size: 26px;
+  font-variant-numeric: tabular-nums; line-height: 1;
+}
+.sommario .che { font-size: 13px; color: var(--ardesia); }
+.avanzamento { height: 5px; border-radius: 99px; background: var(--riga); margin-top: 12px; overflow: hidden; display: flex; }
+.avanzamento i { display: block; height: 100%; }
+.avanzamento .fatto { background: var(--verde); }
+.avanzamento .voce-ambra { background: var(--ambra); }
+
+/* ------------------------------------------------------------ elenco righe */
+#elenchi { display: flex; flex-direction: column; gap: 17px; }
+.gruppo { display: flex; flex-direction: column; gap: 0; }
+.titolo-gruppo {
+  font-family: var(--display); font-size: 11px; font-weight: 700; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--ardesia); margin: 4px 0 7px;
+  display: flex; align-items: center; gap: 8px;
+}
+.titolo-gruppo::after { content: ""; flex: 1; height: 1px; background: var(--riga); }
+
+.righe { background: var(--carta-alta); border: 1px solid var(--riga); border-radius: 14px; overflow: hidden; box-shadow: var(--ombra); }
+.riga {
+  display: grid; grid-template-columns: 4px 52px 1fr auto; align-items: center;
+  gap: 0 11px; padding: 0; border-bottom: 1px solid var(--riga);
+}
+.riga:last-child { border-bottom: 0; }
+.riga .stato-striscia { align-self: stretch; background: var(--ardesia-tenue); }
+.riga.da-inviare .stato-striscia { background: var(--verde); }
+.riga.da-chiamare .stato-striscia { background: var(--ambra); }
+.riga.inviato .stato-striscia { background: var(--riga); }
+.riga.escluso .stato-striscia { background: var(--ruggine); }
+.riga .ora {
+  font-family: var(--display); font-weight: 600; font-variant-numeric: tabular-nums;
+  font-size: 15px; padding: 12px 0 12px 11px; color: var(--inchiostro);
+}
+.riga .chi { padding: 11px 0; min-width: 0; }
+.riga .nome { font-weight: 600; overflow-wrap: anywhere; }
+.riga .dettaglio { font-size: 13px; color: var(--ardesia); overflow-wrap: anywhere; }
+.riga .azione { padding: 8px 11px 8px 0; display: flex; align-items: center; gap: 6px; }
+.riga.inviato .nome, .riga.inviato .ora { color: var(--ardesia); }
+
+.invia {
+  display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+  background: var(--verde); color: var(--su-verde); font-family: var(--display); font-weight: 600;
+  font-size: 14px; padding: 9px 14px; border-radius: 10px; border: 0; cursor: pointer;
+  white-space: nowrap;
+}
+.piu {
+  width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--riga);
+  background: transparent; color: var(--ardesia); cursor: pointer; font-size: 17px; line-height: 1;
+}
+.pillola {
+  font-family: var(--display); font-size: 11px; font-weight: 700; letter-spacing: .05em;
+  text-transform: uppercase; padding: 3px 8px; border-radius: 99px; white-space: nowrap;
+  text-decoration: none;
+}
+.pillola.fatto { background: var(--verde-tenue); color: var(--verde); }
+.pillola.voce { background: var(--ambra-tenue); color: var(--ambra); }
+.pillola.stop { background: var(--ruggine-tenue); color: var(--ruggine); }
+
+/* ------------------------------------------------------------- componenti */
+.bottone {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  border-radius: 11px; border: 1px solid var(--riga); background: var(--carta-alta);
+  color: var(--inchiostro); font-family: var(--display); font-weight: 600; font-size: 15px;
+  padding: 12px 16px; cursor: pointer; text-decoration: none; width: 100%;
+}
+.bottone.primario { background: var(--verde); border-color: var(--verde); color: var(--su-verde); }
+.bottone.pericolo { color: var(--ruggine); border-color: color-mix(in srgb, var(--ruggine) 35%, var(--riga)); }
+.bottone:active { transform: translateY(1px); }
+
+.scheda {
+  background: var(--carta-alta); border: 1px solid var(--riga); border-radius: 14px;
+  padding: 15px; box-shadow: var(--ombra); display: flex; flex-direction: column; gap: 12px;
+}
+.scheda h2 {
+  font-family: var(--display); font-size: 15px; font-weight: 700; margin: 0;
+  letter-spacing: -.01em;
+}
+.scheda p.nota { margin: 0; font-size: 13.5px; color: var(--ardesia); }
+
+label.campo { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--ardesia); }
+label.campo > span { font-family: var(--display); font-weight: 600; letter-spacing: .02em; }
+input[type=text], input[type=tel], input[type=date], input[type=search], textarea, select {
+  width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--riga);
+  background: var(--carta); color: var(--inchiostro); font-size: 16px;
+}
+textarea { resize: vertical; min-height: 110px; font-size: 15px; line-height: 1.5; }
+input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible, a:focus-visible {
+  outline: 2px solid var(--verde); outline-offset: 2px;
+}
+.due { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.anteprima {
+  background: var(--verde-tenue); border-radius: 12px; border-top-left-radius: 4px;
+  padding: 11px 13px; font-size: 14.5px; line-height: 1.5; white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.segnaposti { display: flex; flex-wrap: wrap; gap: 6px; }
+.segnaposti button {
+  border: 1px solid var(--riga); background: var(--carta); color: var(--ardesia);
+  border-radius: 99px; padding: 5px 10px; font-size: 12.5px; cursor: pointer;
+  font-family: var(--display); font-weight: 600;
+}
+.vuoto { text-align: center; color: var(--ardesia); font-size: 14px; padding: 22px 10px; }
+
+.avviso {
+  border-radius: 12px; padding: 11px 13px; font-size: 13.5px; line-height: 1.45;
+  background: var(--ambra-tenue); color: var(--ambra);
+  border: 1px solid color-mix(in srgb, var(--ambra) 25%, transparent);
+  display: flex; gap: 10px; align-items: flex-start;
+}
+.avviso button {
+  margin-left: auto; background: none; border: 0; color: inherit; text-decoration: underline;
+  cursor: pointer; font-weight: 600; white-space: nowrap; padding: 0;
+}
+
+/* ------------------------------------------------------------------ foglio */
+.velo {
+  position: fixed; inset: 0; background: rgba(10, 18, 24, .45); z-index: 40;
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.velo[hidden] { display: none !important; }
+.foglio {
+  background: var(--carta); width: 100%; max-width: 520px; max-height: 92vh; overflow-y: auto;
+  border-radius: 18px 18px 0 0; padding: 8px 16px calc(20px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 14px;
+}
+.maniglia { width: 38px; height: 4px; border-radius: 99px; background: var(--riga); margin: 6px auto 2px; }
+.foglio h2 { font-family: var(--display); font-size: 18px; margin: 0; }
+.scelte { display: flex; flex-direction: column; gap: 8px; }
+
+.brindisi {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(86px + env(safe-area-inset-bottom)); z-index: 50;
+  background: var(--inchiostro); color: var(--carta); padding: 10px 14px; border-radius: 11px;
+  font-size: 14px; box-shadow: var(--ombra); display: flex; align-items: center; gap: 12px;
+  max-width: calc(100% - 32px);
+}
+.brindisi[hidden] { display: none !important; }
+.brindisi button { background: none; border: 0; color: var(--verde); font-weight: 700; cursor: pointer; }
+
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- ============================================================ OGGI -->
+  <section class="schermo attivo" id="s-oggi">
+    <header class="testata">
+      <h1>Promemoria pazienti</h1>
+      <div class="sotto" id="sotto-oggi"></div>
+    </header>
+    <div class="contenuto">
+      <div class="giorno">
+        <div class="etichetta" id="etichetta-giorno"></div>
+        <div class="frecce">
+          <button type="button" data-giorno="-1" aria-label="Giorno precedente">‹</button>
+          <button type="button" data-giorno="0" aria-label="Oggi">•</button>
+          <button type="button" data-giorno="1" aria-label="Giorno successivo">›</button>
+        </div>
+      </div>
+      <div id="avviso-esempi"></div>
+      <div class="sommario" id="sommario"></div>
+      <div id="elenchi"></div>
+      <button class="bottone" type="button" id="apri-incolla">＋ Aggiungi la giornata</button>
+    </div>
+  </section>
+
+  <!-- ========================================================= RUBRICA -->
+  <section class="schermo" id="s-rubrica">
+    <header class="testata">
+      <h1>Rubrica</h1>
+      <div class="sotto" id="sotto-rubrica"></div>
+    </header>
+    <div class="contenuto">
+      <input type="search" id="cerca" placeholder="Cerca per nome o numero" autocomplete="off">
+      <div id="elenco-rubrica"></div>
+    </div>
+  </section>
+
+  <!-- =========================================================== TESTO -->
+  <section class="schermo" id="s-testo">
+    <header class="testata">
+      <h1>Testo del messaggio</h1>
+      <div class="sotto">Vale per tutti i promemoria che invii</div>
+    </header>
+    <div class="contenuto">
+      <div class="scheda">
+        <h2>Modello</h2>
+        <textarea id="modello" rows="5"></textarea>
+        <div class="segnaposti" id="segnaposti"></div>
+        <p class="nota">Anteprima con un paziente d'esempio:</p>
+        <div class="anteprima" id="anteprima-modello"></div>
+      </div>
+      <div class="scheda">
+        <h2>Firma</h2>
+        <label class="campo"><span>Chi firma — <code>{medico}</code></span>
+          <input type="text" id="firma-medico"></label>
+        <label class="campo"><span>Come chiamare la segreteria — <code>{segreteria}</code></span>
+          <input type="text" id="firma-segreteria"></label>
+      </div>
+      <div class="scheda">
+        <h2>Sedi</h2>
+        <p class="nota">L'indirizzo riempie <code>{indirizzo}</code> quando la riga indica quella sede.</p>
+        <div id="elenco-sedi"></div>
+        <div class="due">
+          <input type="text" id="sede-nome" placeholder="Nome sede">
+          <input type="text" id="sede-indirizzo" placeholder="Indirizzo">
+        </div>
+        <button class="bottone" type="button" id="aggiungi-sede">Aggiungi sede</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ DATI -->
+  <section class="schermo" id="s-dati">
+    <header class="testata">
+      <h1>Dati e backup</h1>
+      <div class="sotto" id="sotto-dati"></div>
+    </header>
+    <div class="contenuto">
+      <div class="avviso">
+        <div><b>Tutto sta in questo telefono.</b> Nessun dato dei pazienti esce da qui: non passa
+        da internet e nessun altro può vederlo. Il rovescio della medaglia è che se cancelli i dati
+        di Safari, o cambi telefono, sparisce. Fai un backup ogni tanto.</div>
+      </div>
+      <div class="scheda">
+        <h2>Backup</h2>
+        <p class="nota">Salva un file con rubrica, giornate e impostazioni. Puoi metterlo in
+          File, mandartelo via mail o su iCloud Drive.</p>
+        <button class="bottone" type="button" id="esporta">Esporta un backup</button>
+        <button class="bottone" type="button" id="importa">Ripristina da un backup</button>
+        <input type="file" id="file-import" accept=".json,application/json" hidden>
+      </div>
+      <div class="scheda">
+        <h2>Pulizia</h2>
+        <p class="nota">Le giornate passate restano in memoria per lo storico. Puoi togliere
+          quelle vecchie senza toccare la rubrica.</p>
+        <button class="bottone" type="button" id="pulisci-vecchie">Elimina le giornate prima di oggi</button>
+        <button class="bottone pericolo" type="button" id="azzera">Cancella tutto e riparti</button>
+      </div>
+      <div class="scheda">
+        <h2>Tenerla a portata di mano</h2>
+        <p class="nota">Tocca <b>Condividi</b> in Safari, poi <b>Aggiungi a Home</b>: prende
+          un'icona sulla schermata principale e si apre come un'app.</p>
+      </div>
+    </div>
+  </section>
+
+  <nav class="schede" role="tablist">
+    <button type="button" role="tab" data-vai="oggi" aria-selected="true">
+      <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>Oggi</button>
+    <button type="button" role="tab" data-vai="rubrica" aria-selected="false">
+      <svg viewBox="0 0 24 24"><path d="M4 4h13a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4z"/><circle cx="11" cy="10" r="2.4"/><path d="M7.5 16c.8-1.7 5.2-1.7 6 0M19 8h2M19 12h2M19 16h2"/></svg>Rubrica</button>
+    <button type="button" role="tab" data-vai="testo" aria-selected="false">
+      <svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 20.5l1.7-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg>Testo</button>
+    <button type="button" role="tab" data-vai="dati" aria-selected="false">
+      <svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>Dati</button>
+  </nav>
+</div>
+
+<div class="velo" id="velo" hidden><div class="foglio" id="foglio"></div></div>
+<div class="brindisi" id="brindisi" hidden><span id="brindisi-testo"></span><button type="button" id="brindisi-azione"></button></div>
+
+<script>
+"use strict";
+
+/* =====================================================================
+   Promemoria pazienti - tutto gira dentro il telefono.
+   Nessun dato esce da questa pagina: la memoria e' quella del browser.
+   ===================================================================== */
+
+const CHIAVE_MEMORIA = "promemoria-pazienti-v1";
+
+const MODELLO_INIZIALE =
+  "Gentile {nome}, le ricordiamo l'appuntamento di {data_estesa} alle ore {ora} " +
+  "presso {sede} ({indirizzo}). Per disdette o variazioni contatti {segreteria}. {medico}";
+
+const SEGNAPOSTI = [
+  ["{nome}", "nome di battesimo"],
+  ["{cognome}", "cognome"],
+  ["{data}", "31/07/2026"],
+  ["{data_estesa}", "venerdì 31 luglio 2026"],
+  ["{ora}", "orario"],
+  ["{sede}", "nome della sede"],
+  ["{indirizzo}", "indirizzo della sede"],
+  ["{medico}", "la tua firma"],
+  ["{segreteria}", "la segreteria"],
+];
+
+const GIORNI = ["domenica", "lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato"];
+const MESI = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno",
+              "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
+
+/* ------------------------------------------------------------- memoria */
+function statoIniziale() {
+  const oggi = isoOggi();
+  return {
+    versione: 1,
+    esempi: true,
+    modello: MODELLO_INIZIALE,
+    medico: "Dott. Alberto Busilacchi",
+    segreteria: "la segreteria",
+    sedi: [
+      { nome: "Motus", indirizzo: "Via 1° Maggio, Ancona" },
+      { nome: "Clinicalab", indirizzo: "Largo Neruda 7/A, Civitanova Marche" },
+    ],
+    contatti: {
+      "3331234567": { chiave: "3331234567", cognome: "Rossi", nome: "Mario", telefono: "333 123 4567" },
+      "3339876543": { chiave: "3339876543", cognome: "Bianchi", nome: "Anna", telefono: "333 987 6543" },
+      "3401112223": { chiave: "3401112223", cognome: "Verdi", nome: "Luca", telefono: "340 111 2223", senzaWa: true },
+    },
+    giornate: {
+      [oggi]: [
+        { id: "e1", chiave: "3331234567", ora: "10:30", sede: "Motus", stato: "in_coda" },
+        { id: "e2", chiave: "3339876543", ora: "11:00", sede: "Motus", stato: "in_coda" },
+        { id: "e3", chiave: "3401112223", ora: "11:15", sede: "Clinicalab", stato: "in_coda",
+          note: "non ha WhatsApp, chiamare" },
+      ],
+    },
+  };
+}
+
+let stato = statoIniziale();
+let giornoScelto = isoOggi();
+let annullaUltimo = null;
+
+function carica() {
+  try {
+    const grezzo = localStorage.getItem(CHIAVE_MEMORIA);
+    if (grezzo) stato = Object.assign(statoIniziale(), JSON.parse(grezzo));
+  } catch (e) {
+    /* memoria non disponibile (finestra privata, dati bloccati): si lavora comunque,
+       ma senza ricordare nulla alla prossima apertura */
+  }
+}
+function salva() {
+  try {
+    localStorage.setItem(CHIAVE_MEMORIA, JSON.stringify(stato));
+  } catch (e) {
+    avvisa("Non riesco a salvare su questo telefono: i dati resteranno solo per questa sessione.");
+  }
+}
+
+/* ------------------------------------------------------------- telefono */
+/* 339, 391, 392 e 393 sono prefissi di cellulare: un "39" iniziale e' il
+   prefisso internazionale solo se restano almeno 9 cifre dopo di lui. */
+function e164(numero) {
+  const grezzo = String(numero || "").trim();
+  const cifre = grezzo.replace(/\D/g, "");
+  if (!cifre) return "";
+  if (grezzo.startsWith("+")) return cifre;
+  if (cifre.startsWith("00")) return cifre.slice(2);
+  if (cifre.startsWith("39") && cifre.length - 2 >= 9) return cifre;
+  return "39" + cifre;
+}
+function chiaveTel(numero) {
+  const pieno = e164(numero);
+  return pieno.startsWith("39") ? pieno.slice(2) : pieno;
+}
+function numeroValido(numero) {
+  const n = chiaveTel(numero);
+  return n.length >= 8 && n.length <= 13;
+}
+function numeroLeggibile(numero) {
+  const n = chiaveTel(numero);
+  return n.length === 10 ? `${n.slice(0, 3)} ${n.slice(3, 6)} ${n.slice(6)}` : n;
+}
+
+/* ------------------------------------------------------------ messaggio */
+function isoOggi() { return new Date().toLocaleDateString("sv-SE"); }
+function daIso(iso) { const [a, m, g] = iso.split("-").map(Number); return new Date(a, m - 1, g); }
+function dataBreve(iso) { const d = daIso(iso); return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`; }
+function dataEstesa(iso) {
+  const d = daIso(iso);
+  return `${GIORNI[d.getDay()]} ${d.getDate()} ${MESI[d.getMonth()]} ${d.getFullYear()}`;
+}
+function indirizzoDi(nomeSede) {
+  const s = stato.sedi.find((x) => x.nome.toLowerCase() === String(nomeSede || "").toLowerCase());
+  return s ? s.indirizzo : "";
+}
+
+function componi(modello, valori) {
+  let testo = String(modello).replace(/\{(\w+)\}/g, (intero, chiave) =>
+    Object.prototype.hasOwnProperty.call(valori, chiave) ? valori[chiave] : intero
+  );
+  testo = testo.replace(/\(\s*\)/g, "").replace(/[ \t]{2,}/g, " ").replace(/\s+([.,;:!?])/g, "$1");
+  return testo.trim();
+}
+
+function messaggioPer(app, iso) {
+  const c = stato.contatti[app.chiave] || {};
+  return componi(stato.modello, {
+    nome: c.nome || c.cognome || "",
+    cognome: c.cognome || "",
+    nome_completo: `${c.cognome || ""} ${c.nome || ""}`.trim(),
+    data: dataBreve(iso),
+    data_estesa: dataEstesa(iso),
+    ora: app.ora || "",
+    sede: app.sede || "",
+    indirizzo: indirizzoDi(app.sede),
+    note: app.note || "",
+    medico: stato.medico || "",
+    segreteria: stato.segreteria || "",
+  });
+}
+
+/* --------------------------------------------------- lettura dell'elenco */
+function analizza(testo, cognomePrima) {
+  const righe = testo.split(/\r?\n/).map((r) => r.trim()).filter(Boolean);
+  return righe.map((riga) => {
+    let resto = " " + riga.replace(/[;\t|]+/g, " ") + " ";
+    // le date nella riga sono rumore: la giornata la sceglie l'utente sopra
+    resto = resto.replace(/\b\d{1,2}[/.-]\d{1,2}([/.-]\d{2,4})?\b/g, " ");
+    let ora = (resto.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/) || [])[0] || "";
+    if (!ora) ora = (resto.match(/\b([01]?\d|2[0-3])\.([0-5]\d)\b/) || [])[0] || "";
+    if (ora) { resto = resto.replace(ora, " "); ora = ora.replace(".", ":"); }
+    if (ora && ora.length === 4) ora = "0" + ora;
+
+    let telefono = "";
+    const trovato = resto.match(/(\+?\d[\d\s./-]{7,}\d)/);
+    if (trovato) { telefono = trovato[1].trim(); resto = resto.replace(trovato[1], " "); }
+
+    let sede = "";
+    for (const s of stato.sedi) {
+      const re = new RegExp("\\b" + s.nome.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i");
+      if (re.test(resto)) { sede = s.nome; resto = resto.replace(re, " "); break; }
+    }
+
+    const parole = resto.replace(/[,;]+/g, " ").split(/\s+/).filter(Boolean);
+    let cognome = "", nome = "";
+    if (parole.length === 1) { cognome = parole[0]; }
+    else if (parole.length > 1) {
+      if (cognomePrima) { nome = parole[parole.length - 1]; cognome = parole.slice(0, -1).join(" "); }
+      else { nome = parole[0]; cognome = parole.slice(1).join(" "); }
+    }
+    return { riga, cognome, nome, telefono, ora, sede, valido: numeroValido(telefono) };
+  });
+}
+
+/* ------------------------------------------------------------ interfaccia */
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+function esc(t) {
+  return String(t == null ? "" : t).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function vaiA(nome) {
+  $$(".schermo").forEach((s) => s.classList.toggle("attivo", s.id === "s-" + nome));
+  $$("nav.schede button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.vai === nome)));
+  window.scrollTo(0, 0);
+  if (nome === "rubrica") disegnaRubrica();
+  if (nome === "testo") disegnaTesto();
+  if (nome === "dati") disegnaDati();
+}
+
+function avvisa(testo, azione, etichetta) {
+  const barra = $("#brindisi");
+  $("#brindisi-testo").textContent = testo;
+  const bottone = $("#brindisi-azione");
+  bottone.textContent = etichetta || "";
+  bottone.hidden = !azione;
+  bottone.onclick = () => { barra.hidden = true; if (azione) azione(); };
+  barra.hidden = false;
+  clearTimeout(avvisa.timer);
+  avvisa.timer = setTimeout(() => { barra.hidden = true; }, azione ? 7000 : 3500);
+}
+
+function apriFoglio(titolo, contenutoHtml, dopo) {
+  const foglio = $("#foglio");
+  foglio.innerHTML = `<div class="maniglia"></div><h2>${esc(titolo)}</h2>` + contenutoHtml;
+  $("#velo").hidden = false;
+  document.body.style.overflow = "hidden";
+  if (dopo) dopo(foglio);
+}
+function chiudiFoglio() {
+  $("#velo").hidden = true;
+  document.body.style.overflow = "";
+}
+
+/* ------------------------------------------------------------------ OGGI */
+function statoEffettivo(app) {
+  const c = stato.contatti[app.chiave] || {};
+  if (app.stato === "inviato") return "inviato";
+  if (c.optout) return "escluso";
+  if (c.senzaWa || app.stato === "voce") return "voce";
+  return "in_coda";
+}
+
+function disegnaOggi() {
+  const lista = (stato.giornate[giornoScelto] || []).slice()
+    .sort((a, b) => String(a.ora || "").localeCompare(String(b.ora || "")));
+
+  $("#etichetta-giorno").textContent = dataEstesa(giornoScelto).replace(/^./, (c) => c.toUpperCase());
+  $("#sotto-oggi").textContent = giornoScelto === isoOggi()
+    ? "La giornata di oggi" : "Giornata del " + dataBreve(giornoScelto);
+
+  const gruppi = { in_coda: [], voce: [], inviato: [], escluso: [] };
+  lista.forEach((a) => gruppi[statoEffettivo(a)].push(a));
+
+  const totale = lista.length;
+  const fatti = gruppi.inviato.length;
+  const perc = totale ? Math.round((fatti / totale) * 100) : 0;
+  const percVoce = totale ? Math.round((gruppi.voce.length / totale) * 100) : 0;
+  $("#sommario").innerHTML = totale === 0
+    ? `<div class="vuoto">Nessun appuntamento per questa giornata.</div>`
+    : `<div class="cifre">
+         <div class="voce"><span class="n">${gruppi.in_coda.length}</span><span class="che">da inviare</span></div>
+         <div class="voce"><span class="n">${fatti}</span><span class="che">inviati</span></div>
+         <div class="voce"><span class="n">${gruppi.voce.length}</span><span class="che">da chiamare</span></div>
+       </div>
+       <div class="avanzamento">
+         <i class="fatto" style="width:${perc}%"></i><i class="voce-ambra" style="width:${percVoce}%"></i>
+       </div>`;
+
+  const sezioni = [
+    ["Da inviare", gruppi.in_coda],
+    ["Da chiamare a voce", gruppi.voce],
+    ["Già inviati", gruppi.inviato],
+    ["Non contattare", gruppi.escluso],
+  ];
+  $("#elenchi").innerHTML = sezioni
+    .filter(([, righe]) => righe.length)
+    .map(([titolo, righe]) => `
+      <div class="gruppo">
+        <div class="titolo-gruppo">${titolo} · ${righe.length}</div>
+        <div class="righe">${righe.map(rigaHtml).join("")}</div>
+      </div>`)
+    .join("");
+
+  const avviso = $("#avviso-esempi");
+  avviso.innerHTML = stato.esempi
+    ? `<div class="avviso"><div><b>Questi sono tre pazienti d'esempio</b>, non tuoi: servono
+       a farti vedere com'è fatta la giornata.</div>
+       <button type="button" id="via-esempi">Svuota</button></div>`
+    : "";
+}
+
+function rigaHtml(app) {
+  const c = stato.contatti[app.chiave] || {};
+  const eff = statoEffettivo(app);
+  const nome = `${c.cognome || ""} ${c.nome || ""}`.trim() || numeroLeggibile(c.telefono);
+  const pezzi = [app.sede, numeroLeggibile(c.telefono)].filter(Boolean);
+  let azione;
+  if (eff === "in_coda") {
+    const link = `https://wa.me/${e164(c.telefono)}?text=${encodeURIComponent(messaggioPer(app, giornoScelto))}`;
+    azione = `<a class="invia" href="${esc(link)}" target="_blank" rel="noopener"
+                 data-invia="${esc(app.id)}">Invia</a>`;
+  } else if (eff === "inviato") {
+    azione = `<span class="pillola fatto">inviato</span>`;
+  } else if (eff === "voce") {
+    azione = `<a class="pillola voce" href="tel:${esc(e164(c.telefono))}">chiama</a>`;
+  } else {
+    azione = `<span class="pillola stop">esclusa</span>`;
+  }
+  return `<div class="riga ${eff === "in_coda" ? "da-inviare" : eff === "voce" ? "da-chiamare" : eff}">
+      <div class="stato-striscia"></div>
+      <div class="ora">${esc(app.ora || "—")}</div>
+      <div class="chi">
+        <div class="nome">${esc(nome)}</div>
+        <div class="dettaglio">${esc(pezzi.join(" · "))}${app.note ? " · " + esc(app.note) : ""}</div>
+      </div>
+      <div class="azione">${azione}
+        <button class="piu" type="button" data-menu="${esc(app.id)}" aria-label="Altre azioni">⋯</button>
+      </div>
+    </div>`;
+}
+
+function trovaApp(id) { return (stato.giornate[giornoScelto] || []).find((a) => a.id === id); }
+
+function segnaInviato(id) {
+  const app = trovaApp(id);
+  if (!app) return;
+  const prima = app.stato;
+  app.stato = "inviato";
+  app.quando = new Date().toISOString();
+  salva(); disegnaOggi();
+  avvisa("Segnato come inviato.", () => {
+    app.stato = prima; delete app.quando; salva(); disegnaOggi();
+  }, "Annulla");
+}
+
+function menuRiga(id) {
+  const app = trovaApp(id);
+  if (!app) return;
+  const c = stato.contatti[app.chiave] || {};
+  const nome = `${c.cognome || ""} ${c.nome || ""}`.trim();
+  apriFoglio(nome || "Appuntamento", `
+    <div class="anteprima">${esc(messaggioPer(app, giornoScelto))}</div>
+    <div class="scelte">
+      ${app.stato === "inviato"
+        ? `<button class="bottone" type="button" data-azione="in-coda">Rimetti fra i da inviare</button>`
+        : `<button class="bottone" type="button" data-azione="inviato">Segna come già inviato</button>`}
+      <button class="bottone" type="button" data-azione="voce">Da chiamare a voce</button>
+      <button class="bottone" type="button" data-azione="modifica">Cambia orario o sede</button>
+      <button class="bottone pericolo" type="button" data-azione="optout">Non contattare più questo paziente</button>
+      <button class="bottone pericolo" type="button" data-azione="togli">Togli dalla giornata</button>
+    </div>`, (foglio) => {
+    foglio.querySelectorAll("[data-azione]").forEach((b) => {
+      b.onclick = () => {
+        const che = b.dataset.azione;
+        if (che === "inviato") { chiudiFoglio(); segnaInviato(id); return; }
+        if (che === "in-coda") { app.stato = "in_coda"; delete app.quando; }
+        if (che === "voce") { app.stato = "voce"; }
+        if (che === "optout") {
+          if (!confirm(`${nome} non riceverà più promemoria. Confermi?`)) return;
+          stato.contatti[app.chiave].optout = true;
+        }
+        if (che === "togli") {
+          stato.giornate[giornoScelto] = stato.giornate[giornoScelto].filter((a) => a.id !== id);
+        }
+        if (che === "modifica") { chiudiFoglio(); modificaApp(id); return; }
+        salva(); chiudiFoglio(); disegnaOggi();
+      };
+    });
+  });
+}
+
+function modificaApp(id) {
+  const app = trovaApp(id);
+  if (!app) return;
+  apriFoglio("Orario e sede", `
+    <div class="due">
+      <label class="campo"><span>Ora</span><input type="text" id="m-ora" value="${esc(app.ora || "")}" placeholder="10:30"></label>
+      <label class="campo"><span>Sede</span><select id="m-sede">
+        <option value="">—</option>
+        ${stato.sedi.map((s) => `<option${s.nome === app.sede ? " selected" : ""}>${esc(s.nome)}</option>`).join("")}
+      </select></label>
+    </div>
+    <button class="bottone primario" type="button" id="m-salva">Salva</button>`, (foglio) => {
+    foglio.querySelector("#m-salva").onclick = () => {
+      app.ora = foglio.querySelector("#m-ora").value.trim();
+      app.sede = foglio.querySelector("#m-sede").value;
+      salva(); chiudiFoglio(); disegnaOggi();
+    };
+  });
+}
+
+/* ------------------------------------------------------- incolla giornata */
+function apriIncolla() {
+  apriFoglio("Aggiungi la giornata", `
+    <p class="nota">Incolla l'elenco, una riga per paziente. Va bene com'è: riconosce da solo
+      orario, numero e sede, in qualunque ordine siano scritti.</p>
+    <label class="campo"><span>Giornata</span><input type="date" id="i-data" value="${giornoScelto}"></label>
+    <textarea id="i-testo" placeholder="10:30 Rossi Mario 333 123 4567 Motus
+11:00 Del Colle Giuseppe 338 359 6337 Clinicalab"></textarea>
+    <label class="campo"><span>Nell'elenco il nome è scritto</span>
+      <select id="i-ordine">
+        <option value="cognome">Cognome prima (Rossi Mario)</option>
+        <option value="nome">Nome prima (Mario Rossi)</option>
+      </select></label>
+    <button class="bottone primario" type="button" id="i-leggi">Leggi l'elenco</button>
+    <div id="i-esito"></div>`, (foglio) => {
+    const leggi = () => {
+      const righe = analizza(foglio.querySelector("#i-testo").value,
+                             foglio.querySelector("#i-ordine").value === "cognome");
+      const buone = righe.filter((r) => r.valido);
+      foglio.querySelector("#i-esito").innerHTML = righe.length === 0
+        ? `<p class="nota">Non ho letto nessuna riga.</p>`
+        : `<div class="titolo-gruppo">Ho letto ${righe.length} righe</div>
+           <div class="righe">${righe.map((r) => `
+             <div class="riga ${r.valido ? "da-inviare" : "escluso"}">
+               <div class="stato-striscia"></div>
+               <div class="ora">${esc(r.ora || "—")}</div>
+               <div class="chi">
+                 <div class="nome">${esc(`${r.cognome} ${r.nome}`.trim() || "senza nome")}</div>
+                 <div class="dettaglio">${r.valido
+                   ? esc([numeroLeggibile(r.telefono), r.sede].filter(Boolean).join(" · ")) +
+                     ` · saluto: «Gentile ${esc(r.nome || r.cognome)}»`
+                   : "numero mancante o non valido: la salto"}</div>
+               </div><div class="azione"></div>
+             </div>`).join("")}</div>
+           <button class="bottone primario" type="button" id="i-conferma" style="margin-top:12px">
+             Aggiungi ${buone.length} appuntament${buone.length === 1 ? "o" : "i"}</button>`;
+      const conferma = foglio.querySelector("#i-conferma");
+      if (conferma) conferma.onclick = () => aggiungi(buone, foglio.querySelector("#i-data").value);
+    };
+    foglio.querySelector("#i-leggi").onclick = leggi;
+    foglio.querySelector("#i-testo").addEventListener("input", () => {
+      if (foglio.querySelector("#i-esito").innerHTML) leggi();
+    });
+  });
+}
+
+function aggiungi(righe, iso) {
+  if (!iso) iso = giornoScelto;
+  if (stato.esempi) { stato.giornate = {}; stato.contatti = {}; stato.esempi = false; }
+  if (!stato.giornate[iso]) stato.giornate[iso] = [];
+  let nuovi = 0;
+  righe.forEach((r) => {
+    const chiave = chiaveTel(r.telefono);
+    const esistente = stato.contatti[chiave];
+    stato.contatti[chiave] = Object.assign({ chiave, telefono: r.telefono }, esistente, {
+      cognome: (esistente && esistente.cognome) || r.cognome,
+      nome: (esistente && esistente.nome) || r.nome,
+    });
+    if (!esistente) nuovi++;
+    if (stato.giornate[iso].some((a) => a.chiave === chiave)) return;
+    stato.giornate[iso].push({
+      id: chiave + "-" + Date.now() + "-" + Math.random().toString(36).slice(2, 6),
+      chiave, ora: r.ora, sede: r.sede, stato: "in_coda",
+    });
+  });
+  giornoScelto = iso;
+  salva(); chiudiFoglio(); disegnaOggi();
+  avvisa(`Aggiunti ${righe.length} appuntamenti · ${nuovi} pazienti nuovi in rubrica.`);
+}
+
+/* --------------------------------------------------------------- RUBRICA */
+function disegnaRubrica() {
+  const cerca = ($("#cerca").value || "").toLowerCase().trim();
+  const tutti = Object.values(stato.contatti).sort((a, b) =>
+    `${a.cognome} ${a.nome}`.localeCompare(`${b.cognome} ${b.nome}`, "it"));
+  const visti = tutti.filter((c) => !cerca ||
+    `${c.cognome} ${c.nome} ${c.telefono} ${c.chiave}`.toLowerCase().includes(cerca));
+  $("#sotto-rubrica").textContent = `${tutti.length} pazienti in questo telefono`;
+  $("#elenco-rubrica").innerHTML = visti.length === 0
+    ? `<div class="vuoto">${tutti.length ? "Nessun risultato." : "La rubrica si riempie da sola quando aggiungi una giornata."}</div>`
+    : `<div class="righe">${visti.map((c) => `
+        <div class="riga ${c.optout ? "escluso" : c.senzaWa ? "da-chiamare" : "inviato"}">
+          <div class="stato-striscia"></div>
+          <div class="ora"></div>
+          <div class="chi">
+            <div class="nome">${esc(`${c.cognome} ${c.nome}`.trim())}</div>
+            <div class="dettaglio">${esc(numeroLeggibile(c.telefono))}</div>
+          </div>
+          <div class="azione">
+            ${c.optout ? '<span class="pillola stop">non contattare</span>'
+              : c.senzaWa ? '<span class="pillola voce">niente WhatsApp</span>' : ""}
+            <button class="piu" type="button" data-contatto="${esc(c.chiave)}" aria-label="Modifica">⋯</button>
+          </div>
+        </div>`).join("")}</div>`;
+}
+
+function menuContatto(chiave) {
+  const c = stato.contatti[chiave];
+  if (!c) return;
+  apriFoglio(`${c.cognome} ${c.nome}`.trim() || "Paziente", `
+    <div class="due">
+      <label class="campo"><span>Cognome</span><input type="text" id="c-cognome" value="${esc(c.cognome || "")}"></label>
+      <label class="campo"><span>Nome (usato nel saluto)</span><input type="text" id="c-nome" value="${esc(c.nome || "")}"></label>
+    </div>
+    <label class="campo"><span>Numero</span><input type="tel" id="c-tel" value="${esc(c.telefono || "")}"></label>
+    <div class="scelte">
+      <button class="bottone primario" type="button" data-azione="salva">Salva</button>
+      <button class="bottone" type="button" data-azione="wa">${c.senzaWa ? "Ha WhatsApp" : "Non ha WhatsApp: da chiamare"}</button>
+      <button class="bottone pericolo" type="button" data-azione="optout">${c.optout ? "Torna a contattarlo" : "Non contattare più"}</button>
+      <button class="bottone pericolo" type="button" data-azione="elimina">Elimina dalla rubrica</button>
+    </div>`, (foglio) => {
+    foglio.querySelectorAll("[data-azione]").forEach((b) => {
+      b.onclick = () => {
+        const che = b.dataset.azione;
+        if (che === "salva") {
+          c.cognome = foglio.querySelector("#c-cognome").value.trim();
+          c.nome = foglio.querySelector("#c-nome").value.trim();
+          const nuovo = foglio.querySelector("#c-tel").value.trim();
+          if (nuovo && chiaveTel(nuovo) !== chiave) {
+            if (!numeroValido(nuovo)) { alert("Quel numero non sembra valido."); return; }
+            const nuovaChiave = chiaveTel(nuovo);
+            delete stato.contatti[chiave];
+            c.chiave = nuovaChiave; c.telefono = nuovo;
+            stato.contatti[nuovaChiave] = c;
+            Object.values(stato.giornate).forEach((g) =>
+              g.forEach((a) => { if (a.chiave === chiave) a.chiave = nuovaChiave; }));
+          }
+        }
+        if (che === "wa") c.senzaWa = !c.senzaWa;
+        if (che === "optout") c.optout = !c.optout;
+        if (che === "elimina") {
+          if (!confirm("Elimino il paziente dalla rubrica e da tutte le giornate?")) return;
+          delete stato.contatti[chiave];
+          Object.keys(stato.giornate).forEach((g) => {
+            stato.giornate[g] = stato.giornate[g].filter((a) => a.chiave !== chiave);
+          });
+        }
+        salva(); chiudiFoglio(); disegnaRubrica(); disegnaOggi();
+      };
+    });
+  });
+}
+
+/* ----------------------------------------------------------------- TESTO */
+function disegnaTesto() {
+  $("#modello").value = stato.modello;
+  $("#firma-medico").value = stato.medico;
+  $("#firma-segreteria").value = stato.segreteria;
+  $("#segnaposti").innerHTML = SEGNAPOSTI
+    .map(([s, spiega]) => `<button type="button" data-segnaposto="${esc(s)}" title="${esc(spiega)}">${esc(s)}</button>`).join("");
+  aggiornaAnteprima();
+  $("#elenco-sedi").innerHTML = stato.sedi.length === 0
+    ? `<div class="vuoto">Nessuna sede.</div>`
+    : `<div class="righe">${stato.sedi.map((s, i) => `
+        <div class="riga inviato"><div class="stato-striscia"></div><div class="ora"></div>
+          <div class="chi"><div class="nome">${esc(s.nome)}</div>
+            <div class="dettaglio">${esc(s.indirizzo || "senza indirizzo")}</div></div>
+          <div class="azione"><button class="piu" type="button" data-sede="${i}" aria-label="Elimina">✕</button></div>
+        </div>`).join("")}</div>`;
+}
+
+function aggiornaAnteprima() {
+  const esempio = { chiave: "x", ora: "10:30", sede: (stato.sedi[0] || {}).nome || "" };
+  const finto = { cognome: "Rossi", nome: "Mario" };
+  const vero = stato.contatti["x"];
+  stato.contatti["x"] = finto;
+  $("#anteprima-modello").textContent = messaggioPer(esempio, isoOggi());
+  if (vero) stato.contatti["x"] = vero; else delete stato.contatti["x"];
+}
+
+/* ------------------------------------------------------------------ DATI */
+function disegnaDati() {
+  const n = Object.keys(stato.contatti).length;
+  const g = Object.keys(stato.giornate).length;
+  $("#sotto-dati").textContent = `${n} pazienti · ${g} giornate in memoria`;
+}
+
+function esportaBackup() {
+  const testo = JSON.stringify(stato, null, 2);
+  apriFoglio("Backup", `
+    <p class="nota">Copialo e incollalo dove vuoi conservarlo: una nota, una mail a te stesso,
+      un file in iCloud Drive. Per ripristinarlo servirà tutto il testo.</p>
+    <textarea id="b-testo" rows="7" readonly>${esc(testo)}</textarea>
+    <button class="bottone primario" type="button" id="b-copia">Copia negli appunti</button>`,
+    (foglio) => {
+      foglio.querySelector("#b-copia").onclick = async () => {
+        const area = foglio.querySelector("#b-testo");
+        try {
+          await navigator.clipboard.writeText(testo);
+          avvisa("Backup copiato negli appunti.");
+          chiudiFoglio();
+        } catch (e) {
+          area.focus(); area.select();
+          avvisa("Non riesco a copiare da solo: tieni premuto sul testo e scegli Copia.");
+        }
+      };
+    });
+}
+
+function importaBackup() {
+  apriFoglio("Ripristina", `
+    <p class="nota">Incolla qui il testo di un backup. Sostituirà rubrica, giornate e
+      impostazioni di adesso: quello che c'è ora andrà perso.</p>
+    <textarea id="r-testo" rows="6" placeholder='{ "versione": 1, ... }'></textarea>
+    <button class="bottone" type="button" id="r-file">…oppure scegli un file</button>
+    <button class="bottone pericolo" type="button" id="r-vai">Ripristina</button>`, (foglio) => {
+    foglio.querySelector("#r-file").onclick = () => $("#file-import").click();
+    foglio.querySelector("#r-vai").onclick = () => applicaBackup(foglio.querySelector("#r-testo").value);
+  });
+}
+
+function applicaBackup(testo) {
+  let dati;
+  try { dati = JSON.parse(testo); } catch (e) {
+    alert("Quel testo non è un backup valido: ricontrolla di averlo copiato tutto."); return;
+  }
+  if (!dati || typeof dati !== "object" || !dati.contatti) {
+    alert("Quel backup non contiene una rubrica: non lo applico."); return;
+  }
+  if (!confirm("Sostituisco tutti i dati con quelli del backup?")) return;
+  stato = Object.assign(statoIniziale(), dati);
+  stato.esempi = false;
+  giornoScelto = isoOggi();
+  salva(); chiudiFoglio(); disegnaOggi(); disegnaDati();
+  avvisa("Backup ripristinato.");
+}
+
+/* ------------------------------------------------------------- avvio app */
+function collega() {
+  $$("nav.schede button").forEach((b) => b.onclick = () => vaiA(b.dataset.vai));
+
+  $$(".giorno .frecce button").forEach((b) => b.onclick = () => {
+    const passo = Number(b.dataset.giorno);
+    if (passo === 0) { giornoScelto = isoOggi(); }
+    else { const d = daIso(giornoScelto); d.setDate(d.getDate() + passo); giornoScelto = d.toLocaleDateString("sv-SE"); }
+    disegnaOggi();
+  });
+
+  document.addEventListener("click", (ev) => {
+    const invia = ev.target.closest("[data-invia]");
+    if (invia) { segnaInviato(invia.dataset.invia); return; }   // segna prima di uscire da Safari
+    const menu = ev.target.closest("[data-menu]");
+    if (menu) { menuRiga(menu.dataset.menu); return; }
+    const contatto = ev.target.closest("[data-contatto]");
+    if (contatto) { menuContatto(contatto.dataset.contatto); return; }
+    const sede = ev.target.closest("[data-sede]");
+    if (sede) { stato.sedi.splice(Number(sede.dataset.sede), 1); salva(); disegnaTesto(); return; }
+    const segnaposto = ev.target.closest("[data-segnaposto]");
+    if (segnaposto) {
+      const area = $("#modello");
+      const p = area.selectionStart || area.value.length;
+      area.value = area.value.slice(0, p) + segnaposto.dataset.segnaposto + area.value.slice(p);
+      stato.modello = area.value; salva(); aggiornaAnteprima();
+      area.focus(); area.selectionStart = area.selectionEnd = p + segnaposto.dataset.segnaposto.length;
+      return;
+    }
+    if (ev.target.id === "via-esempi") {
+      stato.giornate = {}; stato.contatti = {}; stato.esempi = false;
+      salva(); disegnaOggi(); return;
+    }
+    if (ev.target === $("#velo")) chiudiFoglio();
+  });
+
+  $("#apri-incolla").onclick = apriIncolla;
+  $("#cerca").addEventListener("input", disegnaRubrica);
+
+  $("#modello").addEventListener("input", (e) => { stato.modello = e.target.value; salva(); aggiornaAnteprima(); });
+  $("#firma-medico").addEventListener("input", (e) => { stato.medico = e.target.value; salva(); aggiornaAnteprima(); });
+  $("#firma-segreteria").addEventListener("input", (e) => { stato.segreteria = e.target.value; salva(); aggiornaAnteprima(); });
+  $("#aggiungi-sede").onclick = () => {
+    const nome = $("#sede-nome").value.trim();
+    if (!nome) return;
+    stato.sedi.push({ nome, indirizzo: $("#sede-indirizzo").value.trim() });
+    $("#sede-nome").value = ""; $("#sede-indirizzo").value = "";
+    salva(); disegnaTesto();
+  };
+
+  $("#esporta").onclick = esportaBackup;
+  $("#importa").onclick = importaBackup;
+  $("#file-import").addEventListener("change", (ev) => {
+    const file = ev.target.files[0];
+    if (!file) return;
+    const lettore = new FileReader();
+    lettore.onload = () => applicaBackup(String(lettore.result));
+    lettore.readAsText(file);
+  });
+  $("#pulisci-vecchie").onclick = () => {
+    const oggi = isoOggi();
+    const vecchie = Object.keys(stato.giornate).filter((g) => g < oggi);
+    if (!vecchie.length) { avvisa("Non ci sono giornate passate."); return; }
+    if (!confirm(`Elimino ${vecchie.length} giornate passate? La rubrica resta.`)) return;
+    vecchie.forEach((g) => delete stato.giornate[g]);
+    salva(); disegnaDati(); disegnaOggi(); avvisa("Giornate passate eliminate.");
+  };
+  $("#azzera").onclick = () => {
+    if (!confirm("Cancello rubrica, giornate e impostazioni. Non si torna indietro. Confermi?")) return;
+    stato = statoIniziale(); stato.esempi = false; stato.giornate = {}; stato.contatti = {};
+    giornoScelto = isoOggi();
+    salva(); disegnaOggi(); disegnaRubrica(); disegnaTesto(); disegnaDati();
+  };
+}
+
+carica();
+collega();
+
+/* Il "service worker" tiene una copia dell'app nel telefono: si apre anche
+   senza rete, e in studio la rete non c'e' sempre. */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => { /* pazienza: si lavora online */ });
+  });
+}
+disegnaOggi();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "Promemoria pazienti",
+  "short_name": "Promemoria",
+  "description": "Promemoria WhatsApp per i pazienti dell'ambulatorio. I dati restano nel telefono.",
+  "lang": "it",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F7F8F7",
+  "theme_color": "#075E54",
+  "icons": [
+    { "src": "icone/icona-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icone/icona-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icone/icona-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
