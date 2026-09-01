@@ -28,6 +28,19 @@ Funziona anche senza rete: al primo avvio l'app resta salvata nel telefono.
 3. Chi non ha WhatsApp finisce nel gruppo **Da chiamare a voce**, con il tasto che compone
    il numero.
 
+### Numeri mancanti: la rubrica li recupera da sola
+
+Molti appuntamenti del calendario non hanno il numero nel titolo. Per questo in **Dati →
+Rubrica da Google Contacts** si carica una volta l'esportazione vCard dei propri contatti
+(contacts.google.com → Esporta → vCard). Da quel momento, quando si incolla la giornata,
+l'app cerca da sola il numero dei pazienti che nel calendario non ce l'hanno, abbinandoli
+per cognome e nome — in qualunque ordine siano scritti, e riconoscendo i cognomi composti.
+
+Due cautele deliberate: se **più contatti hanno lo stesso nome** l'app non sceglie e chiede
+di mettere il numero a mano (scegliere a caso significa scrivere alla persona sbagliata); e
+quando un paziente viene ritrovato in rubrica, cognome e nome vengono presi da lì, perché
+nel calendario l'ordine cambia riga per riga e il saluto ne dipende.
+
 Nella scheda **Testo** si cambiano il modello del messaggio, la firma e le sedi con i
 relativi indirizzi. In **Rubrica** si correggono i nominativi e si segna chi non vuole più
 essere contattato. In **Dati** si fa il backup: conviene farlo ogni tanto, perché svuotare
